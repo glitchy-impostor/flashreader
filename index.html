@@ -968,19 +968,24 @@
             async saveSession(session) {
                 showSyncing();
                 
+                // For local storage, generate a local ID if needed
+                const localId = session.id || ('local_' + Date.now());
+                
                 // Always save to local as backup
                 if (CONFIG.useLocalFallback) {
                     let sessions = JSON.parse(localStorage.getItem('flashread-sessions') || '[]');
-                    const idx = sessions.findIndex(s => s.id === session.id);
-                    if (idx >= 0) sessions[idx] = session;
-                    else sessions.unshift(session);
+                    const localSession = { ...session, id: localId };
+                    const idx = sessions.findIndex(s => s.id === localId || (session.id && s.id === session.id));
+                    if (idx >= 0) sessions[idx] = localSession;
+                    else sessions.unshift(localSession);
                     localStorage.setItem('flashread-sessions', JSON.stringify(sessions.slice(0, 20)));
                 }
                 
                 try {
+                    // Only PATCH if we have a real database ID (number from API)
                     if (session.id && typeof session.id === 'number') {
-                        // Update existing
-                        await fetch(`${CONFIG.API_URL}/flashread/update/${CONFIG.getUserId()}/${session.id}`, {
+                        // Update existing session
+                        const res = await fetch(`${CONFIG.API_URL}/flashread/update/${CONFIG.getUserId()}/${session.id}`, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -989,8 +994,11 @@
                                 wpm: session.wpm
                             })
                         });
+                        if (!res.ok) {
+                            console.warn('PATCH failed:', await res.text());
+                        }
                     } else {
-                        // Create new
+                        // Create new session
                         const res = await fetch(`${CONFIG.API_URL}/flashread/sessions`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1007,7 +1015,10 @@
                             const data = await res.json();
                             if (data.session?.id) {
                                 state.sessionId = data.session.id;
+                                console.log('Created session with ID:', state.sessionId);
                             }
+                        } else {
+                            console.warn('POST failed:', await res.text());
                         }
                     }
                 } catch (e) {
@@ -1024,12 +1035,15 @@
                     localStorage.setItem('flashread-sessions', JSON.stringify(sessions));
                 }
                 
-                try {
-                    await fetch(`${CONFIG.API_URL}/flashread/delete/${CONFIG.getUserId()}/${sessionId}`, {
-                        method: 'DELETE'
-                    });
-                } catch (e) {
-                    console.warn('API delete failed:', e);
+                // Only call API if it's a real database ID
+                if (typeof sessionId === 'number') {
+                    try {
+                        await fetch(`${CONFIG.API_URL}/flashread/delete/${CONFIG.getUserId()}/${sessionId}`, {
+                            method: 'DELETE'
+                        });
+                    } catch (e) {
+                        console.warn('API delete failed:', e);
+                    }
                 }
             },
             
@@ -1297,7 +1311,7 @@
             if (!state.words.length) return;
 
             const session = {
-                id: state.sessionId || Date.now(),
+                id: state.sessionId,  // Will be null for new sessions
                 fileName: state.fileName,
                 words: state.words,
                 currentIndex: state.currentIndex,
@@ -1307,7 +1321,6 @@
                 totalWords: state.words.length
             };
 
-            state.sessionId = session.id;
             await Storage.saveSession(session);
         }
 
