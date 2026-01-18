@@ -932,7 +932,7 @@
         const Storage = {
             async getSessions() {
                 try {
-                    const res = await fetch(`${CONFIG.API_URL}/flashread/sessions/user/${CONFIG.getUserId()}`);
+                    const res = await fetch(`${CONFIG.API_URL}/flashread/list/${CONFIG.getUserId()}`);
                     if (res.ok) {
                         const data = await res.json();
                         return data.sessions || [];
@@ -949,7 +949,7 @@
             
             async getSession(sessionId) {
                 try {
-                    const res = await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${sessionId}`);
+                    const res = await fetch(`${CONFIG.API_URL}/flashread/get/${CONFIG.getUserId()}/${sessionId}`);
                     if (res.ok) {
                         const data = await res.json();
                         return data.session;
@@ -980,7 +980,7 @@
                 try {
                     if (session.id && typeof session.id === 'number') {
                         // Update existing
-                        await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${session.id}`, {
+                        await fetch(`${CONFIG.API_URL}/flashread/update/${CONFIG.getUserId()}/${session.id}`, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1025,7 +1025,7 @@
                 }
                 
                 try {
-                    await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${sessionId}`, {
+                    await fetch(`${CONFIG.API_URL}/flashread/delete/${CONFIG.getUserId()}/${sessionId}`, {
                         method: 'DELETE'
                     });
                 } catch (e) {
@@ -1039,7 +1039,7 @@
                 }
                 
                 try {
-                    await fetch(`${CONFIG.API_URL}/flashread/sessions/user/${CONFIG.getUserId()}`, {
+                    await fetch(`${CONFIG.API_URL}/flashread/clear/${CONFIG.getUserId()}`, {
                         method: 'DELETE'
                     });
                 } catch (e) {
@@ -1705,4 +1705,3 @@
     </script>
 </body>
 </html>
-
