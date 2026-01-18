@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FlashRead - RSVP Speed Reader</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a26;
+            --bg-card: #16161f;
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #55556a;
+            --accent: #ff6b4a;
+            --accent-glow: rgba(255, 107, 74, 0.3);
+            --accent-soft: rgba(255, 107, 74, 0.1);
+            --border: #2a2a3a;
+            --success: #4ade80;
+            --ai-accent: #8b5cf6;
+            --ai-soft: rgba(139, 92, 246, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: 100dvh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            gap: 1rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #ff8f7a);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo h1 { font-size: 1.25rem; font-weight: 700; }
+        .logo h1 span { color: var(--accent); }
+        .header-actions { display: flex; gap: 0.5rem; }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #ff8f7a; box-shadow: 0 4px 20px var(--accent-glow); }
+        .btn-primary:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; }
+        
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        
+        .btn-ai { background: var(--ai-soft); color: var(--ai-accent); border: 1px solid var(--ai-accent); }
+        .btn-ai:hover { background: var(--ai-accent); color: white; }
+        
+        .btn-ghost { background: transparent; color: var(--text-secondary); }
+        .btn-ghost:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+        
+        .btn-icon { padding: 0.5rem; width: 40px; height: 40px; justify-content: center; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+
+        /* Upload */
+        .upload-section {
+            flex: 1;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 2px dashed var(--border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-height: 300px;
+        }
+
+        .upload-section:hover, .upload-section.dragover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .upload-section h3 { margin-bottom: 0.5rem; }
+        .upload-section p { color: var(--text-secondary); font-size: 0.875rem; }
+        #file-input { display: none; }
+
+        /* RSVP Display */
+        .rsvp-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 220px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rsvp-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300%;
+            height: 300%;
+            background: radial-gradient(circle, var(--accent-soft) 0%, transparent 40%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .rsvp-container.playing::before { opacity: 1; }
+
+        .focal-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 70px;
+            background: linear-gradient(to bottom, transparent 0%, var(--accent) 30%, var(--accent) 70%, transparent 100%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .wpm-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.4rem 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+        }
+
+        .wpm-badge .wpm-number { font-size: 1.4rem; font-weight: 700; color: var(--accent); line-height: 1; }
+        .wpm-badge .wpm-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .word-display-wrapper {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .word-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: clamp(2rem, 10vw, 3.5rem);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            position: absolute;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .word-display:hover { opacity: 0.8; }
+        .word-display .char { display: inline-block; }
+        .word-display .orp-char { color: var(--accent); }
+
+        .progress-info {
+            position: absolute;
+            bottom: 0.75rem;
+            left: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .file-name {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 1rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* AI Button on word */
+        .ai-explain-hint {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-size: 0.7rem;
+            color: var(--ai-accent);
+            opacity: 0.7;
+        }
+
+        /* Controls */
+        .controls-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .progress-container { margin-bottom: 1rem; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff8f7a);
+            border-radius: 4px;
+            transition: width 0.05s linear;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .play-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-btn:hover { transform: scale(1.08); box-shadow: 0 8px 30px var(--accent-glow); }
+        .play-btn:disabled { background: var(--border); transform: none; box-shadow: none; cursor: not-allowed; }
+
+        .control-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover { background: var(--border); color: var(--text-primary); }
+
+        .speed-control { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .speed-label { font-size: 0.8rem; color: var(--text-secondary); min-width: 45px; }
+        .speed-slider-container { flex: 1; }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+
+        .speed-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent);
+            min-width: 75px;
+            text-align: right;
+        }
+
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-group { display: flex; gap: 0.5rem; }
+
+        .keyboard-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        kbd {
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.45rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            border: 1px solid var(--border);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95) translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal { transform: scale(1) translateY(0); }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 { font-size: 1.1rem; font-weight: 600; }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover { color: var(--text-primary); }
+        .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        /* Note Modal */
+        .note-context-display {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .note-context-display .current-word { color: var(--accent); font-weight: 600; }
+
+        .note-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .note-textarea:focus { outline: none; border-color: var(--accent); }
+        .note-textarea::placeholder { color: var(--text-muted); }
+
+        /* AI Explanation Modal */
+        .ai-modal .modal { border-color: var(--ai-accent); }
+        .ai-modal .modal-header { border-bottom-color: var(--ai-accent); }
+        .ai-modal .modal-header h2 { color: var(--ai-accent); }
+
+        .ai-word-display {
+            text-align: center;
+            padding: 1rem;
+            background: var(--ai-soft);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--ai-accent);
+        }
+
+        .ai-context {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .ai-explanation-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .ai-explanation-section h4 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ai-explanation-text {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--ai-accent);
+        }
+
+        .ai-loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--ai-accent);
+            border-top-color: transparent;
+            border-radius: 50%;
+            margin-left: 0.75rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Sessions & Notes Lists */
+        .sessions-list, .notes-list-modal { display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .session-item:hover { background: var(--border); }
+        .session-info { flex: 1; min-width: 0; }
+        .session-info h4 { font-size: 0.9rem; font-weight: 500; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-meta { display: flex; gap: 0.5rem; font-size: 0.7rem; color: var(--text-secondary); flex-wrap: wrap; }
+
+        .session-actions { display: flex; gap: 0.25rem; margin-left: 0.5rem; }
+        .session-actions button { padding: 0.4rem; background: var(--bg-secondary); border: none; color: var(--text-muted); cursor: pointer; border-radius: 6px; font-size: 0.85rem; }
+        .session-actions button:hover { background: var(--bg-primary); color: var(--text-primary); }
+
+        .note-card { background: var(--bg-tertiary); border-radius: 10px; padding: 1rem; position: relative; }
+        .note-card-context { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent); margin-bottom: 0.5rem; line-height: 1.4; }
+        .note-card-text { font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; }
+        .note-card-meta { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .note-card-delete { position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+        .note-card-delete:hover { color: var(--accent); }
+
+        .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .empty-state p { font-size: 0.875rem; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 0.875rem 1.25rem;
+            border-radius: 10px;
+            z-index: 1001;
+            opacity: 0;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* Sync indicator */
+        .sync-indicator {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            z-index: 100;
+            display: none;
+        }
+
+        .sync-indicator.syncing { display: flex; align-items: center; gap: 0.5rem; color: var(--accent); }
+        .sync-indicator.syncing::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Help */
+        .help-section { margin-bottom: 1.5rem; }
+        .help-section:last-child { margin-bottom: 0; }
+        .help-section h3 { font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--accent); }
+        .help-section p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .shortcuts-grid { display: grid; gap: 0.5rem; font-size: 0.85rem; }
+        .shortcut-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+        .shortcut-row:last-child { border-bottom: none; }
+
+        @media (max-width: 640px) {
+            .app-container { padding: 0.75rem; }
+            .header-actions .btn span { display: none; }
+            .bottom-actions { flex-direction: column; }
+            .action-group { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sync-indicator" id="sync-indicator">Syncing...</div>
+    
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <h1>Flash<span>Read</span></h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="sessions-btn">📚 <span>Sessions</span></button>
+                <button class="btn btn-ghost btn-icon" id="help-btn" title="Help">?</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="upload-section" id="upload-section">
+                <div class="upload-icon">📄</div>
+                <h3>Drop your PDF here</h3>
+                <p>or click to browse • Also supports pasted text (Ctrl+V)</p>
+                <input type="file" id="file-input" accept=".pdf,.txt">
+            </div>
+
+            <div class="rsvp-container" id="rsvp-container" style="display: none;">
+                <div class="focal-line"></div>
+                <div class="ai-explain-hint">Click word for AI explanation</div>
+                <div class="wpm-badge">
+                    <div class="wpm-number" id="wpm-display">300</div>
+                    <div class="wpm-label">WPM</div>
+                </div>
+                <div class="word-display-wrapper">
+                    <div class="word-display" id="word-display" title="Click for AI explanation"></div>
+                </div>
+                <div class="progress-info" id="progress-info">0 / 0</div>
+                <div class="file-name" id="file-name-display"></div>
+            </div>
+
+            <div class="controls-container" id="controls-container" style="display: none;">
+                <div class="progress-container">
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+
+                <div class="playback-controls">
+                    <button class="control-btn" id="skip-back" title="Back 10 words">⏮</button>
+                    <button class="play-btn" id="play-btn" title="Play/Pause" disabled>▶</button>
+                    <button class="control-btn" id="skip-forward" title="Forward 10 words">⏭</button>
+                </div>
+
+                <div class="speed-control">
+                    <span class="speed-label">Speed</span>
+                    <div class="speed-slider-container">
+                        <input type="range" id="speed-slider" min="100" max="1000" value="300" step="25">
+                    </div>
+                    <span class="speed-value" id="speed-value">300 WPM</span>
+                </div>
+
+                <div class="bottom-actions">
+                    <div class="action-group">
+                        <button class="btn btn-secondary" id="note-btn" title="Add Note (N)">📝 Note</button>
+                        <button class="btn btn-secondary" id="view-notes-btn">📋 <span id="notes-count">0</span></button>
+                        <button class="btn btn-ai" id="ai-btn" title="AI Explain (E)">✨ AI</button>
+                    </div>
+                    <div class="action-group">
+                        <button class="btn btn-primary" id="export-btn">📄 Export PDF</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="keyboard-hint" id="keyboard-hint" style="display: none;">
+                <kbd>Space</kbd> Play &nbsp; <kbd>←</kbd><kbd>→</kbd> Skip &nbsp; <kbd>↑</kbd><kbd>↓</kbd> Speed &nbsp; <kbd>N</kbd> Note &nbsp; <kbd>E</kbd> AI Explain
+            </div>
+        </main>
+    </div>
+
+    <!-- Note Modal -->
+    <div class="modal-overlay" id="note-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📝 Add Note</h2>
+                <button class="modal-close" id="note-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="note-context-display" id="note-context"></div>
+                <textarea class="note-textarea" id="note-textarea" placeholder="Write your note here..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="note-cancel">Cancel</button>
+                <button class="btn btn-primary" id="note-save">Save Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Explanation Modal -->
+    <div class="modal-overlay ai-modal" id="ai-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>✨ AI Explanation</h2>
+                <button class="modal-close" id="ai-modal-close">×</button>
+            </div>
+            <div class="modal-body" id="ai-modal-body">
+                <div class="ai-loading" id="ai-loading">Getting explanation</div>
+                <div id="ai-content" style="display: none;">
+                    <div class="ai-word-display" id="ai-word"></div>
+                    <div class="ai-context" id="ai-context-text"></div>
+                    <div class="ai-explanation-section">
+                        <h4>Explanation</h4>
+                        <div class="ai-explanation-text" id="ai-explanation"></div>
+                    </div>
+                    <div class="ai-explanation-section">
+                        <h4>Simple Version</h4>
+                        <div class="ai-explanation-text" id="ai-simplified"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="ai-close">Close</button>
+                <button class="btn btn-ai" id="ai-add-note">Add as Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes List Modal -->
+    <div class="modal-overlay" id="notes-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📋 Your Notes</h2>
+                <button class="modal-close" id="notes-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="notes-list-modal" id="notes-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="notes-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions Modal -->
+    <div class="modal-overlay" id="sessions-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📚 Saved Sessions</h2>
+                <button class="modal-close" id="sessions-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="sessions-list" id="sessions-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="clear-sessions">Clear All</button>
+                <button class="btn btn-secondary" id="sessions-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="help-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚡ How to Use</h2>
+                <button class="modal-close" id="help-modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h3>RSVP Reading</h3>
+                    <p>The <span style="color:var(--accent)">red letter</span> is the Optimal Recognition Point (ORP) - it never moves. Your eye stays fixed while words flow through.</p>
+                </div>
+                <div class="help-section">
+                    <h3>AI Explanations</h3>
+                    <p>Click any word or press <kbd>E</kbd> to get an instant AI explanation of difficult terms or concepts in context.</p>
+                </div>
+                <div class="help-section">
+                    <h3>Keyboard Shortcuts</h3>
+                    <div class="shortcuts-grid">
+                        <div class="shortcut-row"><span>Play / Pause</span><kbd>Space</kbd></div>
+                        <div class="shortcut-row"><span>Skip ±10 words</span><kbd>←</kbd> <kbd>→</kbd></div>
+                        <div class="shortcut-row"><span>Speed ±25 WPM</span><kbd>↑</kbd> <kbd>↓</kbd></div>
+                        <div class="shortcut-row"><span>Add note</span><kbd>N</kbd></div>
+                        <div class="shortcut-row"><span>AI explain</span><kbd>E</kbd></div>
+                        <div class="shortcut-row"><span>Close modal</span><kbd>Esc</kbd></div>
+                    </div>
+                </div>
+                <div class="help-section">
+                    <h3>PDF Export</h3>
+                    <p>Exports a two-column PDF with your text on the left and annotations on the right, with linked references between them.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="help-close">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // =============================================================================
+        // CONFIGURATION
+        // =============================================================================
+        const CONFIG = {
+            // API endpoint - update this to your Railway backend URL
+            API_URL: 'https://your-railway-app.up.railway.app',  // CHANGE THIS
+            
+            // Fallback to localStorage if API fails
+            useLocalFallback: true,
+            
+            // User ID (for multi-device sync) - could use fingerprint or auth
+            getUserId: () => {
+                let id = localStorage.getItem('flashread-user-id');
+                if (!id) {
+                    id = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+                    localStorage.setItem('flashread-user-id', id);
+                }
+                return id;
+            }
+        };
+
+        // =============================================================================
+        // STATE
+        // =============================================================================
+        const state = {
+            words: [],
+            currentIndex: 0,
+            isPlaying: false,
+            wpm: 300,
+            notes: [],
+            fileName: '',
+            sessionId: null,
+            playInterval: null,
+            charWidth: 0,
+            lastAiExplanation: null,
+            totalWords: 0
+        };
+
+        // =============================================================================
+        // DOM
+        // =============================================================================
+        const $ = id => document.getElementById(id);
+        const el = {
+            uploadSection: $('upload-section'),
+            fileInput: $('file-input'),
+            rsvpContainer: $('rsvp-container'),
+            controlsContainer: $('controls-container'),
+            keyboardHint: $('keyboard-hint'),
+            wordDisplay: $('word-display'),
+            wpmDisplay: $('wpm-display'),
+            progressInfo: $('progress-info'),
+            progressFill: $('progress-fill'),
+            progressBar: $('progress-bar'),
+            playBtn: $('play-btn'),
+            speedSlider: $('speed-slider'),
+            speedValue: $('speed-value'),
+            fileNameDisplay: $('file-name-display'),
+            notesCount: $('notes-count'),
+            toast: $('toast'),
+            syncIndicator: $('sync-indicator'),
+            noteModal: $('note-modal'),
+            noteContext: $('note-context'),
+            noteTextarea: $('note-textarea'),
+            aiModal: $('ai-modal'),
+            aiLoading: $('ai-loading'),
+            aiContent: $('ai-content'),
+            aiWord: $('ai-word'),
+            aiContextText: $('ai-context-text'),
+            aiExplanation: $('ai-explanation'),
+            aiSimplified: $('ai-simplified'),
+            notesModal: $('notes-modal'),
+            notesList: $('notes-list'),
+            sessionsModal: $('sessions-modal'),
+            sessionsList: $('sessions-list'),
+            helpModal: $('help-modal')
+        };
+
+        // =============================================================================
+        // STORAGE API
+        // =============================================================================
+        const Storage = {
+            async getSessions() {
+                try {
+                    const res = await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        return data.sessions || [];
+                    }
+                } catch (e) {
+                    console.warn('API fetch failed, using local storage:', e);
+                }
+                
+                if (CONFIG.useLocalFallback) {
+                    return JSON.parse(localStorage.getItem('flashread-sessions') || '[]');
+                }
+                return [];
+            },
+            
+            async getSession(sessionId) {
+                try {
+                    const res = await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${sessionId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        return data.session;
+                    }
+                } catch (e) {
+                    console.warn('API fetch failed:', e);
+                }
+                
+                if (CONFIG.useLocalFallback) {
+                    const sessions = JSON.parse(localStorage.getItem('flashread-sessions') || '[]');
+                    return sessions.find(s => s.id === sessionId);
+                }
+                return null;
+            },
+            
+            async saveSession(session) {
+                showSyncing();
+                
+                // Always save to local as backup
+                if (CONFIG.useLocalFallback) {
+                    let sessions = JSON.parse(localStorage.getItem('flashread-sessions') || '[]');
+                    const idx = sessions.findIndex(s => s.id === session.id);
+                    if (idx >= 0) sessions[idx] = session;
+                    else sessions.unshift(session);
+                    localStorage.setItem('flashread-sessions', JSON.stringify(sessions.slice(0, 20)));
+                }
+                
+                try {
+                    if (session.id && typeof session.id === 'number') {
+                        // Update existing
+                        await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${session.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                current_index: session.currentIndex,
+                                notes: session.notes,
+                                wpm: session.wpm
+                            })
+                        });
+                    } else {
+                        // Create new
+                        const res = await fetch(`${CONFIG.API_URL}/flashread/sessions`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: CONFIG.getUserId(),
+                                file_name: session.fileName,
+                                words: session.words,
+                                current_index: session.currentIndex,
+                                notes: session.notes,
+                                wpm: session.wpm
+                            })
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.session?.id) {
+                                state.sessionId = data.session.id;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('API save failed:', e);
+                }
+                
+                hideSyncing();
+            },
+            
+            async deleteSession(sessionId) {
+                if (CONFIG.useLocalFallback) {
+                    let sessions = JSON.parse(localStorage.getItem('flashread-sessions') || '[]');
+                    sessions = sessions.filter(s => s.id !== sessionId);
+                    localStorage.setItem('flashread-sessions', JSON.stringify(sessions));
+                }
+                
+                try {
+                    await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}/${sessionId}`, {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    console.warn('API delete failed:', e);
+                }
+            },
+            
+            async clearSessions() {
+                if (CONFIG.useLocalFallback) {
+                    localStorage.removeItem('flashread-sessions');
+                }
+                
+                try {
+                    await fetch(`${CONFIG.API_URL}/flashread/sessions/${CONFIG.getUserId()}`, {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    console.warn('API clear failed:', e);
+                }
+            }
+        };
+
+        // =============================================================================
+        // AI API
+        // =============================================================================
+        const AI = {
+            async explain(word, context) {
+                try {
+                    const res = await fetch(`${CONFIG.API_URL}/flashread/explain`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ word, context })
+                    });
+                    
+                    if (res.ok) {
+                        return await res.json();
+                    } else {
+                        throw new Error('API error');
+                    }
+                } catch (e) {
+                    console.error('AI explanation failed:', e);
+                    return {
+                        explanation: 'Unable to get AI explanation. Please check your internet connection or try again.',
+                        simplified: 'The AI service is currently unavailable.'
+                    };
+                }
+            }
+        };
+
+        // =============================================================================
+        // ORP & WORD RENDERING
+        // =============================================================================
+        function getORPIndex(word) {
+            const len = word.length;
+            if (len <= 1) return 0;
+            if (len <= 5) return Math.floor(len / 2) - 1;
+            if (len <= 9) return Math.floor(len / 2);
+            if (len <= 13) return Math.floor(len / 2) + 1;
+            return Math.floor(len / 2) + 2;
+        }
+
+        function measureCharWidth() {
+            const temp = document.createElement('span');
+            temp.style.cssText = `font-family:'JetBrains Mono',monospace;font-size:${getComputedStyle(el.wordDisplay).fontSize};font-weight:600;letter-spacing:0.02em;visibility:hidden;position:absolute;`;
+            temp.textContent = 'X';
+            document.body.appendChild(temp);
+            state.charWidth = temp.getBoundingClientRect().width;
+            document.body.removeChild(temp);
+        }
+
+        function renderWord(word) {
+            if (!word) {
+                el.wordDisplay.innerHTML = '';
+                el.wordDisplay.style.left = '50%';
+                el.wordDisplay.style.transform = 'translateX(-50%)';
+                return;
+            }
+
+            if (!state.charWidth) measureCharWidth();
+
+            const orpIndex = getORPIndex(word);
+            let html = '';
+            for (let i = 0; i < word.length; i++) {
+                html += `<span class="char${i === orpIndex ? ' orp-char' : ''}">${word[i]}</span>`;
+            }
+            el.wordDisplay.innerHTML = html;
+
+            const wrapper = el.wordDisplay.parentElement;
+            const centerX = wrapper.offsetWidth / 2;
+            const orpCenterOffset = (orpIndex + 0.5) * state.charWidth;
+            el.wordDisplay.style.left = `${centerX - orpCenterOffset}px`;
+            el.wordDisplay.style.transform = 'none';
+        }
+
+        function updateDisplay() {
+            const word = state.words[state.currentIndex] || '';
+            renderWord(word);
+            const progress = state.words.length > 1 ? (state.currentIndex / (state.words.length - 1)) * 100 : 0;
+            el.progressFill.style.width = `${Math.min(100, progress)}%`;
+            el.progressInfo.textContent = `${state.currentIndex + 1} / ${state.words.length}`;
+        }
+
+        // =============================================================================
+        // PLAYBACK
+        // =============================================================================
+        function togglePlay() {
+            if (!state.words.length) return;
+            state.isPlaying = !state.isPlaying;
+            el.playBtn.textContent = state.isPlaying ? '⏸' : '▶';
+            el.rsvpContainer.classList.toggle('playing', state.isPlaying);
+            state.isPlaying ? startReading() : stopReading();
+        }
+
+        function startReading() {
+            stopReading();
+            const interval = 60000 / state.wpm;
+            state.playInterval = setInterval(() => {
+                if (state.currentIndex < state.words.length - 1) {
+                    state.currentIndex++;
+                    updateDisplay();
+                } else {
+                    stopReading();
+                    state.isPlaying = false;
+                    el.playBtn.textContent = '▶';
+                    el.rsvpContainer.classList.remove('playing');
+                    showToast('✓ Complete!');
+                    saveCurrentSession();
+                }
+            }, interval);
+        }
+
+        function stopReading() {
+            if (state.playInterval) {
+                clearInterval(state.playInterval);
+                state.playInterval = null;
+            }
+        }
+
+        function pauseReading() {
+            if (state.isPlaying) {
+                state.isPlaying = false;
+                el.playBtn.textContent = '▶';
+                el.rsvpContainer.classList.remove('playing');
+                stopReading();
+            }
+        }
+
+        function updateSpeed(wpm) {
+            state.wpm = wpm;
+            el.speedValue.textContent = `${wpm} WPM`;
+            el.wpmDisplay.textContent = wpm;
+            if (state.isPlaying) startReading();
+        }
+
+        function skip(n) {
+            state.currentIndex = Math.max(0, Math.min(state.words.length - 1, state.currentIndex + n));
+            updateDisplay();
+        }
+
+        // =============================================================================
+        // NOTES
+        // =============================================================================
+        function getContext(range = 8) {
+            const start = Math.max(0, state.currentIndex - range);
+            const end = Math.min(state.words.length, state.currentIndex + range + 1);
+            return state.words.slice(start, end).join(' ');
+        }
+
+        function openNoteModal() {
+            pauseReading();
+            const start = Math.max(0, state.currentIndex - 8);
+            const end = Math.min(state.words.length, state.currentIndex + 9);
+            let html = '';
+            for (let i = start; i < end; i++) {
+                html += i === state.currentIndex ? `<span class="current-word">${state.words[i]}</span> ` : state.words[i] + ' ';
+            }
+            el.noteContext.innerHTML = `"...${html.trim()}..."`;
+            el.noteTextarea.value = '';
+            el.noteModal.classList.add('active');
+            setTimeout(() => el.noteTextarea.focus(), 100);
+        }
+
+        function closeNoteModal() { el.noteModal.classList.remove('active'); }
+
+        function saveNote(text = null) {
+            const noteText = text || el.noteTextarea.value.trim();
+            if (!noteText) return showToast('Enter a note first');
+
+            state.notes.push({
+                id: Date.now(),
+                text: noteText,
+                wordIndex: state.currentIndex,
+                word: state.words[state.currentIndex],
+                context: getContext(5)
+            });
+
+            el.notesCount.textContent = state.notes.length;
+            if (!text) closeNoteModal();
+            saveCurrentSession();
+            showToast('✓ Note saved!');
+        }
+
+        function deleteNote(id) {
+            state.notes = state.notes.filter(n => n.id !== id);
+            el.notesCount.textContent = state.notes.length;
+            renderNotes();
+            saveCurrentSession();
+        }
+
+        function renderNotes() {
+            if (!state.notes.length) {
+                el.notesList.innerHTML = '<div class="empty-state"><p>No notes yet</p></div>';
+                return;
+            }
+            el.notesList.innerHTML = state.notes.map(n => `
+                <div class="note-card">
+                    <button class="note-card-delete" onclick="deleteNote(${n.id})">×</button>
+                    <div class="note-card-context">"...${esc(n.context)}..."</div>
+                    <div class="note-card-text">${esc(n.text)}</div>
+                    <div class="note-card-meta">Word ${n.wordIndex + 1}</div>
+                </div>
+            `).join('');
+        }
+
+        function openNotesModal() {
+            pauseReading();
+            renderNotes();
+            el.notesModal.classList.add('active');
+        }
+
+        // =============================================================================
+        // AI EXPLANATION
+        // =============================================================================
+        async function openAiModal() {
+            pauseReading();
+            
+            const word = state.words[state.currentIndex];
+            const context = getContext(15);
+            
+            el.aiWord.textContent = word;
+            el.aiContextText.textContent = `"...${context}..."`;
+            el.aiLoading.style.display = 'flex';
+            el.aiContent.style.display = 'none';
+            el.aiModal.classList.add('active');
+            
+            const result = await AI.explain(word, context);
+            state.lastAiExplanation = result;
+            
+            el.aiExplanation.textContent = result.explanation;
+            el.aiSimplified.textContent = result.simplified;
+            el.aiLoading.style.display = 'none';
+            el.aiContent.style.display = 'block';
+        }
+
+        function closeAiModal() { el.aiModal.classList.remove('active'); }
+
+        function addAiAsNote() {
+            if (state.lastAiExplanation) {
+                const noteText = `AI Explanation: ${state.lastAiExplanation.explanation}\n\nSimplified: ${state.lastAiExplanation.simplified}`;
+                saveNote(noteText);
+                closeAiModal();
+            }
+        }
+
+        // =============================================================================
+        // SESSIONS
+        // =============================================================================
+        async function saveCurrentSession() {
+            if (!state.words.length) return;
+
+            const session = {
+                id: state.sessionId || Date.now(),
+                fileName: state.fileName,
+                words: state.words,
+                currentIndex: state.currentIndex,
+                notes: state.notes,
+                wpm: state.wpm,
+                timestamp: new Date().toISOString(),
+                totalWords: state.words.length
+            };
+
+            state.sessionId = session.id;
+            await Storage.saveSession(session);
+        }
+
+        async function loadSession(id) {
+            const session = await Storage.getSession(id);
+            if (!session) return showToast('Session not found');
+
+            state.sessionId = session.id;
+            state.words = session.words;
+            state.currentIndex = session.current_index || session.currentIndex || 0;
+            state.notes = session.notes || [];
+            state.fileName = session.file_name || session.fileName;
+            state.wpm = session.wpm || 300;
+
+            el.speedSlider.value = state.wpm;
+            updateSpeed(state.wpm);
+            showReader();
+            updateDisplay();
+            el.notesCount.textContent = state.notes.length;
+            closeModal(el.sessionsModal);
+            showToast('✓ Loaded!');
+        }
+
+        async function deleteSession(id, e) {
+            e.stopPropagation();
+            await Storage.deleteSession(id);
+            renderSessions();
+            showToast('Deleted');
+        }
+
+        async function clearAllSessions() {
+            if (!confirm('Delete all sessions?')) return;
+            await Storage.clearSessions();
+            renderSessions();
+            showToast('Cleared');
+        }
+
+        async function renderSessions() {
+            const sessions = await Storage.getSessions();
+            if (!sessions.length) {
+                el.sessionsList.innerHTML = '<div class="empty-state"><p>No saved sessions</p></div>';
+                return;
+            }
+            el.sessionsList.innerHTML = sessions.map(s => {
+                const d = new Date(s.updated_at || s.timestamp);
+                const total = s.totalWords || s.words?.length || 0;
+                const current = s.current_index ?? s.currentIndex ?? 0;
+                const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+                const notes = s.notes_count ?? s.notes?.length ?? 0;
+                return `
+                    <div class="session-item" onclick="loadSession(${s.id})">
+                        <div class="session-info">
+                            <h4>${esc(s.file_name || s.fileName || 'Untitled')}</h4>
+                            <div class="session-meta">
+                                <span>${pct}%</span>
+                                <span>•</span>
+                                <span>${notes} notes</span>
+                                <span>•</span>
+                                <span>${d.toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div class="session-actions">
+                            <button onclick="deleteSession(${s.id}, event)">🗑</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // =============================================================================
+        // PDF EXPORT - Two Column with Linked Annotations
+        // =============================================================================
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const pageW = doc.internal.pageSize.width;
+            const pageH = doc.internal.pageSize.height;
+            const margin = 15;
+            const colGap = 10;
+            const textColW = (pageW - margin * 2 - colGap) * 0.6;
+            const noteColW = (pageW - margin * 2 - colGap) * 0.4;
+            const noteColX = margin + textColW + colGap;
+            
+            let textY = margin + 20;
+            let noteY = margin + 20;
+            let noteNum = 1;
+            
+            // Build note lookup by word index
+            const notesByWord = {};
+            state.notes.forEach((n, i) => {
+                if (!notesByWord[n.wordIndex]) notesByWord[n.wordIndex] = [];
+                notesByWord[n.wordIndex].push({ ...n, num: i + 1 });
+            });
+
+            // Title
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(state.fileName || 'Reading Session', margin, margin + 8);
+            
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(120);
+            doc.text(`${new Date().toLocaleString()} • ${state.wpm} WPM • ${state.notes.length} annotations`, margin, margin + 14);
+            
+            // Column headers
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text('TEXT', margin, textY - 3);
+            doc.text('ANNOTATIONS', noteColX, noteY - 3);
+            
+            // Divider line
+            doc.setDrawColor(200);
+            doc.line(noteColX - colGap/2, margin + 15, noteColX - colGap/2, pageH - margin);
+            
+            textY += 5;
+            noteY += 5;
+
+            doc.setFontSize(9);
+            doc.setTextColor(40);
+            
+            // Process text in chunks, marking annotated words
+            let currentLine = '';
+            const lineHeight = 5;
+            
+            for (let i = 0; i < state.words.length; i++) {
+                let word = state.words[i];
+                
+                // Check if this word has annotations
+                if (notesByWord[i]) {
+                    word = `${word}[${notesByWord[i].map(n => n.num).join(',')}]`;
+                }
+                
+                const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                const testWidth = doc.getTextWidth(testLine);
+                
+                if (testWidth > textColW) {
+                    // Flush current line
+                    if (textY > pageH - margin) {
+                        doc.addPage();
+                        textY = margin;
+                        noteY = margin;
+                        doc.setDrawColor(200);
+                        doc.line(noteColX - colGap/2, margin, noteColX - colGap/2, pageH - margin);
+                    }
+                    doc.text(currentLine, margin, textY);
+                    textY += lineHeight;
+                    currentLine = word;
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            
+            // Flush remaining text
+            if (currentLine) {
+                if (textY > pageH - margin) {
+                    doc.addPage();
+                    textY = margin;
+                }
+                doc.text(currentLine, margin, textY);
+            }
+            
+            // Now add annotations in the right column
+            noteY = margin + 25;
+            
+            state.notes.forEach((note, idx) => {
+                if (noteY > pageH - 30) {
+                    doc.addPage();
+                    noteY = margin;
+                    doc.setDrawColor(200);
+                    doc.line(noteColX - colGap/2, margin, noteColX - colGap/2, pageH - margin);
+                }
+                
+                // Note number and context
+                doc.setFontSize(8);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(255, 107, 74);
+                doc.text(`[${idx + 1}] Word ${note.wordIndex + 1}:`, noteColX, noteY);
+                noteY += 4;
+                
+                // Context
+                doc.setFont(undefined, 'italic');
+                doc.setFontSize(7);
+                doc.setTextColor(120);
+                const contextLines = doc.splitTextToSize(`"${note.context}"`, noteColW);
+                contextLines.forEach(line => {
+                    doc.text(line, noteColX, noteY);
+                    noteY += 3;
+                });
+                noteY += 2;
+                
+                // Note text
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(8);
+                doc.setTextColor(40);
+                const noteLines = doc.splitTextToSize(note.text, noteColW);
+                noteLines.forEach(line => {
+                    if (noteY > pageH - margin) {
+                        doc.addPage();
+                        noteY = margin;
+                    }
+                    doc.text(line, noteColX, noteY);
+                    noteY += 4;
+                });
+                
+                noteY += 6;
+            });
+
+            doc.save((state.fileName || 'session').replace(/\.[^/.]+$/, '') + '-annotated.pdf');
+            showToast('✓ Exported!');
+        }
+
+        // =============================================================================
+        // HELPERS
+        // =============================================================================
+        function showReader() {
+            el.uploadSection.style.display = 'none';
+            el.rsvpContainer.style.display = 'flex';
+            el.controlsContainer.style.display = 'block';
+            el.keyboardHint.style.display = 'block';
+            el.playBtn.disabled = false;
+            el.fileNameDisplay.textContent = state.fileName;
+            setTimeout(measureCharWidth, 50);
+        }
+
+        function showToast(msg) {
+            el.toast.textContent = msg;
+            el.toast.classList.add('show');
+            setTimeout(() => el.toast.classList.remove('show'), 2500);
+        }
+
+        function showSyncing() { el.syncIndicator.classList.add('syncing'); }
+        function hideSyncing() { el.syncIndicator.classList.remove('syncing'); }
+
+        function closeModal(m) { m.classList.remove('active'); }
+
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // =============================================================================
+        // FILE HANDLING
+        // =============================================================================
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        async function handleFile(file) {
+            state.fileName = file.name;
+            state.sessionId = null;
+            state.notes = [];
+            state.currentIndex = 0;
+            el.notesCount.textContent = '0';
+            showToast('Loading...');
+
+            if (file.type === 'application/pdf') {
+                try {
+                    const buf = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument(buf).promise;
+                    let text = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(x => x.str).join(' ') + ' ';
+                    }
+                    state.words = text.split(/\s+/).filter(w => w);
+                    showReader();
+                    updateDisplay();
+                    saveCurrentSession();
+                    showToast(`✓ ${state.words.length.toLocaleString()} words`);
+                } catch (e) {
+                    console.error(e);
+                    showToast('Error reading PDF');
+                }
+            } else {
+                state.words = (await file.text()).split(/\s+/).filter(w => w);
+                showReader();
+                updateDisplay();
+                saveCurrentSession();
+                showToast(`✓ ${state.words.length.toLocaleString()} words`);
+            }
+        }
+
+        // =============================================================================
+        // EVENT LISTENERS
+        // =============================================================================
+        el.uploadSection.onclick = () => el.fileInput.click();
+        el.fileInput.onchange = e => e.target.files[0] && handleFile(e.target.files[0]);
+
+        el.uploadSection.ondragover = e => { e.preventDefault(); el.uploadSection.classList.add('dragover'); };
+        el.uploadSection.ondragleave = () => el.uploadSection.classList.remove('dragover');
+        el.uploadSection.ondrop = e => {
+            e.preventDefault();
+            el.uploadSection.classList.remove('dragover');
+            e.dataTransfer.files[0] && handleFile(e.dataTransfer.files[0]);
+        };
+
+        el.playBtn.onclick = togglePlay;
+        $('skip-back').onclick = () => skip(-10);
+        $('skip-forward').onclick = () => skip(10);
+        el.speedSlider.oninput = e => updateSpeed(+e.target.value);
+
+        el.progressBar.onclick = e => {
+            const pct = (e.clientX - el.progressBar.getBoundingClientRect().left) / el.progressBar.offsetWidth;
+            state.currentIndex = Math.floor(Math.max(0, Math.min(1, pct)) * (state.words.length - 1));
+            updateDisplay();
+        };
+
+        // Word click for AI
+        el.wordDisplay.onclick = () => state.words.length && openAiModal();
+
+        // Notes
+        $('note-btn').onclick = openNoteModal;
+        $('note-modal-close').onclick = closeNoteModal;
+        $('note-cancel').onclick = closeNoteModal;
+        $('note-save').onclick = () => saveNote();
+        el.noteTextarea.onkeydown = e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveNote(); };
+
+        // AI
+        $('ai-btn').onclick = openAiModal;
+        $('ai-modal-close').onclick = closeAiModal;
+        $('ai-close').onclick = closeAiModal;
+        $('ai-add-note').onclick = addAiAsNote;
+
+        // View notes
+        $('view-notes-btn').onclick = openNotesModal;
+        $('notes-modal-close').onclick = () => closeModal(el.notesModal);
+        $('notes-close').onclick = () => closeModal(el.notesModal);
+
+        // Sessions
+        $('sessions-btn').onclick = () => { renderSessions(); el.sessionsModal.classList.add('active'); };
+        $('sessions-modal-close').onclick = () => closeModal(el.sessionsModal);
+        $('sessions-close').onclick = () => closeModal(el.sessionsModal);
+        $('clear-sessions').onclick = clearAllSessions;
+
+        // Help
+        $('help-btn').onclick = () => el.helpModal.classList.add('active');
+        $('help-modal-close').onclick = () => closeModal(el.helpModal);
+        $('help-close').onclick = () => closeModal(el.helpModal);
+
+        // Export
+        $('export-btn').onclick = exportPDF;
+
+        // Modal overlay clicks
+        [el.noteModal, el.aiModal, el.notesModal, el.sessionsModal, el.helpModal].forEach(m => {
+            m.onclick = e => e.target === m && closeModal(m);
+        });
+
+        // Keyboard
+        document.onkeydown = e => {
+            const anyModal = [el.noteModal, el.aiModal, el.notesModal, el.sessionsModal, el.helpModal].some(m => m.classList.contains('active'));
+            
+            if (e.key === 'Escape') {
+                [el.noteModal, el.aiModal, el.notesModal, el.sessionsModal, el.helpModal].forEach(closeModal);
+                return;
+            }
+            
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || anyModal) return;
+
+            switch (e.key) {
+                case ' ': e.preventDefault(); state.words.length && togglePlay(); break;
+                case 'ArrowLeft': e.preventDefault(); skip(-10); break;
+                case 'ArrowRight': e.preventDefault(); skip(10); break;
+                case 'ArrowUp': e.preventDefault(); el.speedSlider.value = Math.min(1000, state.wpm + 25); updateSpeed(+el.speedSlider.value); break;
+                case 'ArrowDown': e.preventDefault(); el.speedSlider.value = Math.max(100, state.wpm - 25); updateSpeed(+el.speedSlider.value); break;
+                case 'n': case 'N': e.preventDefault(); state.words.length && openNoteModal(); break;
+                case 'e': case 'E': e.preventDefault(); state.words.length && openAiModal(); break;
+            }
+        };
+
+        // Paste
+        document.onpaste = e => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+            const text = e.clipboardData.getData('text');
+            if (text?.length > 50) {
+                e.preventDefault();
+                state.fileName = 'Pasted Text';
+                state.sessionId = null;
+                state.notes = [];
+                state.currentIndex = 0;
+                el.notesCount.textContent = '0';
+                state.words = text.split(/\s+/).filter(w => w);
+                showReader();
+                updateDisplay();
+                saveCurrentSession();
+                showToast(`✓ ${state.words.length.toLocaleString()} words`);
+            }
+        };
+
+        window.onresize = () => { state.charWidth = 0; state.words.length && updateDisplay(); };
+        window.onbeforeunload = () => state.words.length && saveCurrentSession();
+
+        // Init
+        renderSessions();
+    </script>
+</body>
+</html>
